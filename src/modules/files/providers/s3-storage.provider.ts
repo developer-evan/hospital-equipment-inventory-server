@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   StorageProvider,
   StoredFileRef,
+  StoredFileStream,
   UploadedFileInput,
 } from '../../../common/interfaces/storage-provider.interface';
 
@@ -44,6 +45,13 @@ export class S3StorageProvider implements StorageProvider {
     const bucket = this.configService.get<string>('storage.s3.bucket');
     const region = this.configService.get<string>('storage.s3.region');
     return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+  }
+
+  openDownloadStream(_key: string): Promise<StoredFileStream> {
+    this.assertConfigured();
+    throw new NotImplementedException(
+      'S3StorageProvider.openDownloadStream is a stub — see class-level TODO comments to implement.',
+    );
   }
 
   private assertConfigured(): void {

@@ -50,7 +50,7 @@ export class EquipmentService {
     await equipment.save();
 
     await this.attachQrCode(equipment);
-    return equipment;
+    return this.withPublicFileUrls(equipment);
   }
 
   async findAll(
@@ -78,7 +78,9 @@ export class EquipmentService {
     ]);
 
     return {
-      items: items as unknown as EquipmentDocument[],
+      items: (items as unknown as EquipmentDocument[]).map((item) =>
+        this.withPublicFileUrls(item),
+      ),
       meta: buildPaginationMeta(query.page ?? 1, query.limit ?? 10, totalItems),
     };
   }
@@ -92,10 +94,11 @@ export class EquipmentService {
       department: new Types.ObjectId(departmentId),
       status: { $ne: EquipmentStatus.PENDING_INSTALLATION },
     };
-    return this.equipmentModel
+    const items = await this.equipmentModel
       .find(filter)
       .populate('department', 'name code')
       .lean();
+    return items.map((item) => this.withPublicFileUrls(item));
   }
 
   async findByStatus(
@@ -103,10 +106,11 @@ export class EquipmentService {
     user: AuthenticatedUser,
   ): Promise<EquipmentDocument[]> {
     const filter = { ...buildDepartmentFilter(user), status };
-    return this.equipmentModel
+    const items = await this.equipmentModel
       .find(filter)
       .populate('department', 'name code')
       .lean();
+    return items.map((item) => this.withPublicFileUrls(item));
   }
 
   async findById(id: string): Promise<EquipmentDocument> {
@@ -116,7 +120,7 @@ export class EquipmentService {
     if (!equipment) {
       throw new NotFoundException(`Equipment ${id} not found`);
     }
-    return equipment;
+    return this.withPublicFileUrls(equipment);
   }
 
   async update(
@@ -135,7 +139,7 @@ export class EquipmentService {
     if (!equipment) {
       throw new NotFoundException(`Equipment ${id} not found`);
     }
-    return equipment;
+    return this.withPublicFileUrls(equipment);
   }
 
   async softDelete(id: string, actorId?: string): Promise<void> {
@@ -159,9 +163,11 @@ export class EquipmentService {
       'equipment-photos',
       ALLOWED_IMAGE_MIME_TYPES,
     );
-    equipment.photoUrls.push(...refs.map((r) => r.url));
+    equipment.photoUrls.push(
+      ...refs.map((r) => this.filesService.storageKeyFromRef(r)),
+    );
     await equipment.save();
-    return equipment;
+    return this.withPublicFileUrls(equipment);
   }
 
   async uploadManual(
@@ -174,15 +180,20 @@ export class EquipmentService {
       'equipment-manuals',
       ALLOWED_DOCUMENT_MIME_TYPES,
     );
-    equipment.manualUrls.push(ref.url);
+    equipment.manualUrls.push(this.filesService.storageKeyFromRef(ref));
     await equipment.save();
-    return equipment;
+    return this.withPublicFileUrls(equipment);
   }
 
   async regenerateQrCode(id: string): Promise<EquipmentDocument> {
-    const equipment = await this.findById(id);
+    const equipment = await this.equipmentModel
+      .findById(id)
+      .populate('department', 'name code');
+    if (!equipment) {
+      throw new NotFoundException(`Equipment ${id} not found`);
+    }
     await this.attachQrCode(equipment);
-    return equipment;
+    return this.withPublicFileUrls(equipment);
   }
 
   private async attachQrCode(equipment: EquipmentDocument): Promise<void> {
@@ -197,7 +208,7 @@ export class EquipmentService {
       'qr-codes',
       ['image/png'],
     );
-    equipment.qrCodeUrl = ref.url;
+    equipment.qrCodeUrl = this.filesService.storageKeyFromRef(ref);
     await equipment.save();
   }
 
@@ -225,6 +236,24 @@ export class EquipmentService {
     const filter = buildDepartmentFilter(user);
     const docs = await this.equipmentModel.find(filter).select('_id').lean();
     return docs.map((d) => d._id);
+  }
+
+  private withPublicFileUrls<T extends EquipmentDocument | Record<string, unknown>>(
+    equipment: T,
+  ): T {
+    const doc = equipment as EquipmentDocument;
+    doc.qrCodeUrl = this.filesService.resolveStoredUrl(doc.qrCodeUrl);
+    if (doc.photoUrls?.length) {
+      doc.photoUrls = doc.photoUrls.map(
+        (url) => this.filesService.resolveStoredUrl(url)!,
+      );
+    }
+    if (doc.manualUrls?.length) {
+      doc.manualUrls = doc.manualUrls.map(
+        (url) => this.filesService.resolveStoredUrl(url)!,
+      );
+    }
+    return equipment;
   }
 
   private async assertUnique(

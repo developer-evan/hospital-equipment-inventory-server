@@ -59,9 +59,17 @@ describe('EquipmentService', () => {
           useValue: {
             uploadOne: jest.fn().mockResolvedValue({
               key: 'qr-codes/x.png',
-              url: 'http://x/qr.png',
+              url: 'http://localhost:3000/uploads/qr-codes/x.png',
             }),
             uploadMany: jest.fn(),
+            storageKeyFromRef: jest.fn((ref: { key: string }) => ref.key),
+            resolveStoredUrl: jest.fn((stored?: string) => {
+              if (!stored) return stored;
+              const key = stored.includes('/uploads/')
+                ? stored.split('/uploads/')[1]
+                : stored;
+              return `https://hospital-equipment-inventory-server.onrender.com/uploads/${key}`;
+            }),
           },
         },
       ],
@@ -110,7 +118,9 @@ describe('EquipmentService', () => {
         'qr-codes',
         ['image/png'],
       );
-      expect((result as any).qrCodeUrl).toBe('http://x/qr.png');
+      expect((result as any).qrCodeUrl).toBe(
+        'https://hospital-equipment-inventory-server.onrender.com/uploads/qr-codes/x.png',
+      );
     });
 
     it('throws ConflictException when serial number or asset number already exists', async () => {

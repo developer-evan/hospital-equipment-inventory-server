@@ -4,6 +4,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Types } from 'mongoose';
 import { EquipmentService } from '../equipment/equipment.service';
+import { FilesService } from '../files/files.service';
 import { MaintenanceStatus } from './enums/maintenance-status.enum';
 import { MaintenanceType } from './enums/maintenance-type.enum';
 import { MaintenanceEvents } from './events/maintenance.events';
@@ -52,6 +53,12 @@ describe('MaintenanceService', () => {
           useValue: { findById: jest.fn(), findScopedIds: jest.fn() },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: FilesService,
+          useValue: {
+            resolveStoredUrl: jest.fn((url?: string) => url),
+          },
+        },
       ],
     }).compile();
 

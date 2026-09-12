@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import { createReadStream } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import {
   StorageProvider,
   StoredFileRef,
+  StoredFileStream,
   UploadedFileInput,
 } from '../../../common/interfaces/storage-provider.interface';
 
@@ -46,5 +48,10 @@ export class LocalDiskStorageProvider implements StorageProvider {
 
   getUrl(key: string): string {
     return `${this.baseUrl}/uploads/${key}`;
+  }
+
+  async openDownloadStream(key: string): Promise<StoredFileStream> {
+    const fullPath = join(this.rootDir, key);
+    return { stream: createReadStream(fullPath) };
   }
 }

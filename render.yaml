@@ -19,6 +19,6 @@ services:
       - key: APP_BASE_URL
         sync: false
       - key: STORAGE_DRIVER
-        value: local
+        value: mongodb
       - key: UPLOAD_ROOT_DIR
         value: ./uploads

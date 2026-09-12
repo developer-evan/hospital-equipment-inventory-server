@@ -22,12 +22,14 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.useStaticAssets(
-    join(process.cwd(), configService.get<string>('storage.uploadRootDir')!),
-    {
-      prefix: '/uploads',
-    },
-  );
+  if (configService.get<string>('storage.driver') === 'local') {
+    app.useStaticAssets(
+      join(process.cwd(), configService.get<string>('storage.uploadRootDir')!),
+      {
+        prefix: '/uploads',
+      },
+    );
+  }
 
   app.useGlobalPipes(
     new ValidationPipe({

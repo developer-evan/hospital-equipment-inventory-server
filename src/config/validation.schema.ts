@@ -13,7 +13,7 @@ export const validationSchema = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().min(16).required(),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
 
-  STORAGE_DRIVER: Joi.string().valid('local', 's3').default('local'),
+  STORAGE_DRIVER: Joi.string().valid('local', 's3', 'mongodb').default('local'),
   UPLOAD_ROOT_DIR: Joi.string().default('./uploads'),
   UPLOAD_MAX_FILE_SIZE_MB: Joi.number().default(10),
   APP_BASE_URL: Joi.string().default('http://localhost:3000'),

@@ -20,8 +20,14 @@ export const STORAGE_PROVIDER = 'STORAGE_PROVIDER';
  * default implementation; `S3StorageProvider` is stubbed for later use
  * by switching `STORAGE_DRIVER=s3` in the environment (see FilesModule).
  */
+export interface StoredFileStream {
+  stream: NodeJS.ReadableStream;
+  contentType?: string;
+}
+
 export interface StorageProvider {
   upload(file: UploadedFileInput): Promise<StoredFileRef>;
   delete(key: string): Promise<void>;
   getUrl(key: string): string;
+  openDownloadStream(key: string): Promise<StoredFileStream>;
 }

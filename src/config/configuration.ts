@@ -1,3 +1,34 @@
+const normalizeBaseUrl = (url: string): string => url.replace(/\/+$/, '');
+
+const isLocalhostOrigin = (url: string): boolean => {
+  try {
+    const { hostname } = new URL(url);
+    return hostname === 'localhost' || hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Public origin for uploaded file URLs. Prefers a non-localhost `APP_BASE_URL`;
+ * on Render, falls back to `RENDER_EXTERNAL_URL` when env still points at localhost.
+ */
+const resolveAppBaseUrl = (): string => {
+  const configured = process.env.APP_BASE_URL?.trim();
+  const renderExternal = process.env.RENDER_EXTERNAL_URL?.trim();
+
+  if (configured && !isLocalhostOrigin(normalizeBaseUrl(configured))) {
+    return normalizeBaseUrl(configured);
+  }
+  if (renderExternal) {
+    return normalizeBaseUrl(renderExternal);
+  }
+  if (configured) {
+    return normalizeBaseUrl(configured);
+  }
+  return 'http://localhost:3000';
+};
+
 export default () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT ?? '3000', 10),
@@ -15,7 +46,7 @@ export default () => ({
     driver: process.env.STORAGE_DRIVER ?? 'local',
     uploadRootDir: process.env.UPLOAD_ROOT_DIR ?? './uploads',
     maxFileSizeMb: parseInt(process.env.UPLOAD_MAX_FILE_SIZE_MB ?? '10', 10),
-    appBaseUrl: process.env.APP_BASE_URL ?? 'http://localhost:3000',
+    appBaseUrl: resolveAppBaseUrl(),
     s3: {
       bucket: process.env.AWS_S3_BUCKET,
       region: process.env.AWS_S3_REGION,

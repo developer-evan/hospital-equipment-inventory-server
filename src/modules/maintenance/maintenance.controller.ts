@@ -105,9 +105,9 @@ export class MaintenanceController {
       ALLOWED_IMAGE_MIME_TYPES,
     );
     const record = await this.maintenanceService.findById(id);
-    record.photoUrls.push(...refs.map((r) => r.url));
+    record.photoUrls.push(...refs.map((r) => this.filesService.storageKeyFromRef(r)));
     await record.save();
-    return record;
+    return this.maintenanceService.findById(id);
   }
 
   @Delete(':id')

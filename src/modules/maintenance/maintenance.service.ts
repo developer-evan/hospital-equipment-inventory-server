@@ -11,6 +11,7 @@ import type { AuthenticatedUser } from '../../common/interfaces/request-with-use
 import { PaginatedResult } from '../../common/interceptors/response.interceptor';
 import { isDepartmentScopedUser } from '../../common/utils/department-scope.util';
 import { EquipmentService } from '../equipment/equipment.service';
+import { FilesService } from '../files/files.service';
 import { CompleteMaintenanceDto } from './dto/complete-maintenance.dto';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
@@ -35,6 +36,7 @@ export class MaintenanceService {
     private readonly maintenanceModel: Model<MaintenanceDocument>,
     private readonly equipmentService: EquipmentService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly filesService: FilesService,
   ) {}
 
   async create(
@@ -62,7 +64,7 @@ export class MaintenanceService {
       createdBy: actorId,
     });
 
-    return record;
+    return this.withPublicPhotoUrls(record);
   }
 
   async findAll(
@@ -105,7 +107,7 @@ export class MaintenanceService {
     if (!record) {
       throw new NotFoundException(`Maintenance record ${id} not found`);
     }
-    return record;
+    return this.withPublicPhotoUrls(record);
   }
 
   async update(
@@ -121,7 +123,7 @@ export class MaintenanceService {
     if (!record) {
       throw new NotFoundException(`Maintenance record ${id} not found`);
     }
-    return record;
+    return this.withPublicPhotoUrls(record);
   }
 
   async markComplete(
@@ -159,7 +161,7 @@ export class MaintenanceService {
       await this.scheduleNextOccurrence(record);
     }
 
-    return record;
+    return this.withPublicPhotoUrls(record);
   }
 
   async softDelete(id: string, actorId?: string): Promise<void> {
@@ -238,9 +240,23 @@ export class MaintenanceService {
     ]);
 
     return {
-      items: items as unknown as MaintenanceDocument[],
+      items: (items as unknown as MaintenanceDocument[]).map((item) =>
+        this.withPublicPhotoUrls(item),
+      ),
       meta: buildPaginationMeta(query.page ?? 1, query.limit ?? 10, totalItems),
     };
+  }
+
+  private withPublicPhotoUrls<T extends MaintenanceDocument | Record<string, unknown>>(
+    record: T,
+  ): T {
+    const doc = record as MaintenanceDocument;
+    if (doc.photoUrls?.length) {
+      doc.photoUrls = doc.photoUrls.map(
+        (url) => this.filesService.resolveStoredUrl(url)!,
+      );
+    }
+    return record;
   }
 
   private async scheduleNextOccurrence(
